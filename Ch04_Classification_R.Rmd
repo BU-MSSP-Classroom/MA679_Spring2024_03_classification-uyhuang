@@ -7,7 +7,7 @@ editor_options:
     wrap: 72
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.align = "center")
 pacman::p_load(arm,
        car
@@ -23,6 +23,8 @@ pacman::p_load(arm,
       , tidymodels
       , caret
       , ISLR
+      , mass
+      , naivebayes
       )
 ```
 
@@ -371,29 +373,27 @@ Please write your answer in full sentences.
     most likely to be useful in predicting `mpg01`? Scatterplots and
     boxplots may be useful tools to answer this question. Describe your
     findings.
-    
+
 ```{r}
 con_vars <- c("displacement", "horsepower", "weight", "acceleration")
-
-# Plotting each continuous variable against mpg01
-par(mfrow = c(2, 2)) # Setting up the plotting area to have 2 rows and 2 columns
+par(mfrow = c(2, 2)) 
 for (var in con_vars) {
   plot(auto[[var]], auto$mpg01, main = paste("mpg01 vs", var), xlab = var, ylab = "mpg01", pch = 19)
 }
 par(mfrow = c(1, 1))
 
-# Boxplots for categorical variables
 cat_vars <- c("cylinders", "year", "origin")
-
-# Plotting boxplots for each categorical variable
 par(mfrow = c(2, 2)) # Adjust the plotting area based on the number of categorical variables
 for (var in cat_vars) {
-  boxplot(auto$mpg01 ~ auto[[var]], main = paste("mpg01 vs", var), xlab = var, ylab = "mpg01")
+  boxplot(auto[[var]]~auto$mpg01, main = paste("mpg01 vs", var), xlab = "mpg01", ylab = var)
 }
-
-# Resetting the plotting area
 par(mfrow = c(1, 1))
 
+```
+
+```         
+From the scatter plot, we can see that all of the predictors has some clear relationship, which indicates that they can be useful. 
+From the box plot, the median is very different between mpg01=1 and mpg01=0, and there are several outliters, so all the predictors are useful.
 ```
 
 (c) Split the data into a training set and a test set.
@@ -401,8 +401,13 @@ par(mfrow = c(1, 1))
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+size <- floor(dim(auto)[1]*0.3)
+samp_idx<-sample(1:dim(auto)[1],size,FALSE)
+Train_auto<- auto[samp_idx,]
+Test_auto <- auto[-samp_idx,]
+# Sanity check
+table(Train_COVID$SURVIVED)/nrow(Train_COVID)
+table(Test_COVID$SURVIVED)/nrow(Test_COVID)
 ```
 
 Your answer:
@@ -418,14 +423,18 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+lda <- lda(mpg01 ~ cylinders+displacement+horsepower+weight+acceleration+year+origin, data = Train_auto)
+
+lda_pred <- predict(lda, newdata = Test_auto)
+accuracy <- mean(lda_pred$class == Test_auto$mpg01)
+test_error <- 1 - accuracy
+print(test_error)
 ```
 
 Your answer:
 
 ```         
-Please write your answer in full sentences.
+The test error is 11.6%
 ```
 
 (e) Perform QDA on the training data in order to predict `mpg01` using
@@ -435,14 +444,18 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+qda <- qda(mpg01 ~ cylinders+displacement+horsepower+weight+acceleration+year+origin, data = Train_auto)
+
+qda_pred <- predict(qda, newdata = Test_auto)
+accuracy <- mean(qda_pred$class == Test_auto$mpg01)
+test_error <- 1 - accuracy
+print(test_error)
 ```
 
 Your answer:
 
 ```         
-Please write your answer in full sentences.
+The test error is 10.5%
 ```
 
 (f) Perform logistic regression on the training data in order to predict
@@ -452,14 +465,20 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+f2 <- glm(mpg01 ~ cylinders+displacement+horsepower+weight+acceleration+year+origin, data = Train_auto, family = binomial(link = "logit"))
+
+logit_f = predict(f2, Test_auto, type = "response")
+logit_p = ifelse(logit_f >0.5,1,0)
+accuracy <- mean(logit_p == Test_auto$mpg01)
+test_error <- 1 - accuracy
+print(test_error)
+
 ```
 
 Your answer:
 
 ```         
-Please write your answer in full sentences.
+The test error is 12%
 ```
 
 (g) Perform naive Bayes on the training data in order to predict `mpg01`
@@ -468,15 +487,22 @@ Please write your answer in full sentences.
 
 Your code:
 
-```{r,echo=TRUE}
-#
-#
+```{r,echo=TRUE, warning=F}
+Train_auto$mpg01 <- as.factor(Train_auto$mpg01)
+f3 <- naive_bayes(mpg01 ~ cylinders + displacement + horsepower + weight + acceleration + year + origin, 
+                  data = Train_auto)
+
+nb_p <- predict(f3, Test_auto, type = "class")
+nb_accuracy <- mean(nb_p == Test_auto$mpg01)
+nb_test_error <- 1 - nb_accuracy
+print(nb_test_error)
+
 ```
 
 Your answer:
 
 ```         
-Please write your answer in full sentences.
+The test error is 10.5%
 ```
 
 (h) Perform KNN on the training data, with several values of K, in order
@@ -487,14 +513,32 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+selected_vars <- c("cylinders", "displacement", "horsepower", "weight", "acceleration", "year", "origin")
+
+Train_auto_scaled <- Train_auto
+Test_auto_scaled <- Test_auto
+Train_auto_scaled[selected_vars] <- scale(Train_auto[selected_vars])
+Test_auto_scaled[selected_vars] <- scale(Test_auto[selected_vars])
+k_values <- 1:20
+test_errors <- numeric(length(k_values))
+
+for (k in k_values) {
+  knn_pred <- knn(train = Train_auto_scaled[selected_vars], test = Test_auto_scaled[selected_vars], 
+                  cl = Train_auto$mpg01, k = k)
+  test_errors[k] <- mean(knn_pred != Test_auto$mpg01)
+}
+
+best_k <- which.min(test_errors)
+best_error <- test_errors[best_k]
+
+print(paste("Best K is:", best_k, "and the test error is", best_error))
+
 ```
 
 Your answer:
 
 ```         
-Please write your answer in full sentences.
+Best K is: 3, and the test error is 9.8%
 ```
 
 ## Additional Material
