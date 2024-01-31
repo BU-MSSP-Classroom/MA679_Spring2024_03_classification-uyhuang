@@ -22,6 +22,7 @@ pacman::p_load(arm,
       , mlr3learners
       , tidymodels
       , caret
+      , ISLR
       )
 ```
 
@@ -258,6 +259,8 @@ predict the outcome of the remaining patients. It's important to note
 that you also need to get a prediction for patients with NA values.
 
 ```{r,echo=show_code}
+Covid_Data$PREGNANT_bin <-1*(Covid_Data$PREGNANT=="yes")
+Covid_Data$PNEUMONIA_bin <-1*(Covid_Data$PNEUMONIA=="yes")
 size<-floor(dim(Covid_Data)[1]*0.3)
 set.seed(1257)
 samp_idx<-sample(1:dim(Covid_Data)[1],size,FALSE)
@@ -282,8 +285,7 @@ Your code:
 Your answer:
 
 ```         
-Please write your answer in full sentences.
-
+I will use confusion matrix because we have the P* and N* from training data and P, N from the test data.
 ```
 
 Q2. What was your best performing model?
@@ -291,15 +293,17 @@ Q2. What was your best performing model?
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+Covid_Data$PREGNANT_bin <-1*(Covid_Data$PREGNANT=="yes")
+Covid_Data$PNEUMONIA_bin <-1*(Covid_Data$PNEUMONIA=="yes")
+f1 <- glm(formula = SURVIVED_bin~SEX+MEDICAL_UNIT+HIPERTENSION+CARDIOVASCULAR+OTHER_DISEASE+TOBACCO+PATIENT_TYPE+PREGNANT_bin+DIABETES+RENAL_CHRONIC+ASTHMA+INMSUPR+PNEUMONIA_bin+SEX*AGE_TRUNK, family = binomial,data = Train_COVID)
+summary(f1)
+arm::binnedplot(predict(f1,type="response"),resid(f1,type="response" ))
+
 ```
 
 Your answer:
 
 ```         
-Please write your answer in full sentences.
-
 ```
 
 Q3. Explain how you got the model in detail.
@@ -314,8 +318,7 @@ Your code:
 Your answer:
 
 ```         
-Please write your answer in full sentences.
-
+I add all the predictors that make sense into the model, and comparing the deviance and residual plot to the previous model, it's obvious better than the previous one. However, through the residual plot, there's still some missing predictors, and my guess is some interactions.
 ```
 
 Q4. Based on your model, what factor seems to be important in deciding
@@ -331,8 +334,7 @@ Your code:
 Your answer:
 
 ```         
-Please write your answer in full sentences.
-
+SEX, MEDICAL_UNIT, CARDIOVASCULAR, PATIENT_TYPE, PATIENT_TYPE, PREGNANT, DIABETES, ASTHMA, INMSUPR, PNEUMONIA, AGE_TRUNK, SEX*AGE_TRUNK
 ```
 
 ## Problem Set
@@ -352,7 +354,9 @@ gets high or low gas mileage based on the `Auto` data set.
 Your code:
 
 ```{r,echo=TRUE}
-#
+auto <- Auto
+mpg_median <- median(Auto$mpg)
+auto$mpg01 <- ifelse(auto$mpg>mpg_median, 1, 0)
 #
 ```
 
@@ -360,7 +364,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 (b) Explore the data graphically in order to investigate the association
@@ -368,6 +371,30 @@ Please write your answer in full sentences.
     most likely to be useful in predicting `mpg01`? Scatterplots and
     boxplots may be useful tools to answer this question. Describe your
     findings.
+    
+```{r}
+con_vars <- c("displacement", "horsepower", "weight", "acceleration")
+
+# Plotting each continuous variable against mpg01
+par(mfrow = c(2, 2)) # Setting up the plotting area to have 2 rows and 2 columns
+for (var in con_vars) {
+  plot(auto[[var]], auto$mpg01, main = paste("mpg01 vs", var), xlab = var, ylab = "mpg01", pch = 19)
+}
+par(mfrow = c(1, 1))
+
+# Boxplots for categorical variables
+cat_vars <- c("cylinders", "year", "origin")
+
+# Plotting boxplots for each categorical variable
+par(mfrow = c(2, 2)) # Adjust the plotting area based on the number of categorical variables
+for (var in cat_vars) {
+  boxplot(auto$mpg01 ~ auto[[var]], main = paste("mpg01 vs", var), xlab = var, ylab = "mpg01")
+}
+
+# Resetting the plotting area
+par(mfrow = c(1, 1))
+
+```
 
 (c) Split the data into a training set and a test set.
 
@@ -382,7 +409,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 (d) Perform LDA on the training data in order to predict `mpg01` using
@@ -400,7 +426,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 (e) Perform QDA on the training data in order to predict `mpg01` using
@@ -418,7 +443,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 (f) Perform logistic regression on the training data in order to predict
@@ -436,7 +460,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 (g) Perform naive Bayes on the training data in order to predict `mpg01`
@@ -454,7 +477,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 (h) Perform KNN on the training data, with several values of K, in order
@@ -473,7 +495,6 @@ Your answer:
 
 ```         
 Please write your answer in full sentences.
-
 ```
 
 ## Additional Material
